@@ -1,0 +1,608 @@
+.workspace {
+  width: min(1560px, 100%);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    linear-gradient(150deg, var(--panel-sheen), transparent 36%),
+    var(--panel);
+  box-shadow: 0 20px 55px var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.workspaceHeader {
+  min-height: 66px;
+  padding: 12px 16px 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.syncState {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  text-align: left;
+}
+
+.syncState > span {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 10px rgba(var(--lime-rgb), 0.65);
+  animation: chartPulse 1.7s ease-in-out infinite;
+}
+
+.syncState[data-paused] > span,
+.syncState[data-delayed] > span,
+.syncState[data-syncing] > span {
+  background: var(--amber);
+  box-shadow: none;
+  animation: none;
+}
+
+.syncState strong,
+.syncState small {
+  display: block;
+}
+
+.syncState strong {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.syncState strong.currentCandleTime {
+  font-size: 11px;
+}
+
+.syncState small {
+  min-width: 0;
+  max-width: 560px;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--muted-2);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retryButton {
+  height: 25px;
+  padding: 0 8px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(var(--amber-rgb), 0.35);
+  border-radius: 5px;
+  color: var(--amber);
+  background: var(--control-bg);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 6px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.retryButton:hover {
+  border-color: var(--amber);
+}
+
+.retryButton:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+@keyframes chartPulse {
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.timeframeControls {
+  width: min(560px, 100%);
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.timeframeBar {
+  min-width: 0;
+  min-height: 40px;
+  margin: 0;
+  padding: 5px 6px;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control-bg);
+  white-space: nowrap;
+}
+
+.timeframeOption {
+  position: relative;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.timeframeOption input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.timeframeOption span {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 2px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 5px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 720;
+  white-space: nowrap;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.timeframeOption:hover span {
+  border-color: rgba(var(--accent-rgb), 0.48);
+  color: var(--text-secondary);
+}
+
+.timeframeOption input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.timeframeOption input:checked + span {
+  color: var(--canvas);
+  border-color: var(--accent);
+  background: var(--accent-strong);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.18);
+}
+
+.activeTimeframeControl {
+  min-width: 220px;
+  padding: 5px 6px 5px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control-bg);
+}
+
+.activeTimeframeControl > span {
+  min-width: 122px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activeTimeframeControl > span b {
+  color: var(--accent-strong);
+  font-size: 7px;
+}
+
+.activeTimeframeControl > span em {
+  color: var(--text-secondary);
+  font-size: 6px;
+  font-style: normal;
+}
+
+.activeTimeframeControl label {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.timeframeControls select {
+  min-width: 76px;
+  height: 28px;
+  padding: 0 26px 0 10px;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 5px;
+  color: var(--accent-strong);
+  background: var(--panel-soft);
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.timeframeControls select:hover {
+  border-color: rgba(var(--accent-rgb), 0.48);
+}
+
+.timeframeControls select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mobileTabs {
+  display: none;
+}
+
+.chartGrid {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  background: var(--surface-inset);
+}
+
+.slot {
+  position: relative;
+  min-width: 0;
+  height: clamp(205px, 16.2vw, 255px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--chart-surface);
+  box-shadow: inset 0 1px 0 var(--panel-sheen);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.slot:hover {
+  border-color: var(--line-strong);
+}
+
+.slot[data-active="true"] {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.16),
+    0 0 20px rgba(var(--accent-rgb), 0.075),
+    inset 0 1px 0 var(--panel-sheen);
+}
+
+.slot[data-stale] {
+  border-color: rgba(var(--amber-rgb), 0.3);
+}
+
+.symbolOverlay:focus-visible,
+.emptySlot button:focus-visible,
+.mobileTabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.symbolOverlay {
+  position: absolute;
+  z-index: 3;
+  top: 7px;
+  left: 8px;
+  max-width: calc(100% - 72px);
+  min-height: 30px;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--heading);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 4px 14px var(--shadow);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 780;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.symbolOverlay:hover {
+  color: var(--accent-strong);
+  border-color: rgba(var(--accent-rgb), 0.42);
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.chartBody {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  display: block;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chartBody:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.loadingBadge {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 3px 6px;
+  color: var(--muted-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--control-bg);
+  font-size: 6px;
+}
+
+.slot[data-stale] .loadingBadge {
+  color: var(--amber);
+  border-color: rgba(var(--amber-rgb), 0.3);
+  background: var(--panel);
+}
+
+.emptySlot {
+  display: grid;
+  place-items: stretch;
+  border-style: dashed;
+}
+
+.emptySlot button {
+  width: 100%;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 7px;
+  border: 0;
+  color: var(--muted-2);
+  background: transparent;
+  cursor: pointer;
+}
+
+.emptySlot button > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-strong);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.06);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.emptySlot strong {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.emptySlot small {
+  max-width: 190px;
+  line-height: 1.5;
+  font-size: 7px;
+  text-align: center;
+}
+
+.workspaceFooter {
+  min-height: 34px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted-2);
+  border-top: 1px solid var(--line);
+  font-size: 7px;
+}
+
+@media (max-width: 1180px) {
+  .workspaceHeader {
+    flex-wrap: wrap;
+  }
+
+  .timeframeControls {
+    width: 100%;
+    margin-left: 0;
+    order: 3;
+  }
+
+  .activeTimeframeControl {
+    width: auto;
+  }
+
+  .chartGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .slot {
+    height: 230px;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspaceHeader {
+    align-items: flex-start;
+  }
+
+  .syncState {
+    min-width: 0;
+  }
+
+  .chartGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .slot {
+    height: 245px;
+  }
+}
+
+@media (max-width: 720px) {
+  .workspaceHeader {
+    display: block;
+  }
+
+  .syncState {
+    margin-top: 10px;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .syncState strong {
+    font-size: 8px;
+  }
+
+  .syncState strong.currentCandleTime {
+    font-size: 10px;
+  }
+
+  .timeframeControls {
+    width: 100%;
+    min-width: 0;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .timeframeBar {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .activeTimeframeControl {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 100%;
+    overflow: hidden;
+  }
+
+  .activeTimeframeControl > span {
+    min-width: 100px;
+  }
+
+  .activeTimeframeControl label {
+    margin-left: auto;
+  }
+
+  .mobileTabs {
+    padding: 8px 10px;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: thin;
+  }
+
+  .mobileTabs button {
+    min-width: 86px;
+    height: 34px;
+    padding: 0 9px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--muted);
+    background: var(--control-bg);
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .mobileTabs button span {
+    margin-right: 5px;
+    color: var(--muted-2);
+    font-weight: 800;
+  }
+
+  .mobileTabs .mobileTabActive {
+    color: var(--text-strong);
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.08);
+  }
+
+  .chartGrid {
+    display: block;
+  }
+
+  .slot {
+    display: none;
+    height: 360px;
+  }
+
+  .slot[data-active="true"] {
+    display: block;
+  }
+
+  .symbolOverlay {
+    top: 8px;
+    left: 8px;
+    min-height: 49px;
+    padding-inline: 12px;
+    font-size: 10px;
+  }
+
+  .workspaceFooter {
+    min-height: 42px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .timeframeBar {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .activeTimeframeControl {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .activeTimeframeControl > span {
+    display: none;
+  }
+
+  .symbolOverlay { max-width: calc(100% - 60px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .syncState > span,
+  .slot,
+  .timeframeOption span {
+    animation: none;
+    transition: none;
+  }
+}
