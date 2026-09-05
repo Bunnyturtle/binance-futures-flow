@@ -17,6 +17,11 @@ import styles from "./AttentionRadar.module.css";
 
 const RADAR_REFRESH_MS = 15 * 60_000;
 const RADAR_REQUEST_TIMEOUT_MS = 12_000;
+// HTTP 451 is a property of where the server runs, so it cannot clear between
+// refreshes. Re-check hourly instead of burning a doomed request every 15
+// minutes; a manual retry always re-checks immediately.
+const SERVER_BLOCK_STATUS = 451;
+const SERVER_BLOCK_RECHECK_MS = 60 * 60_000;
 
 type RadarSource = "api" | "public";
 type RadarStatus = "loading" | "live" | "recovered" | "delayed";
@@ -48,6 +53,18 @@ function responseMessage(payload: unknown, fallback: string): string {
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return fallback;
+}
+
+type RadarFetchError = Error & { status?: number };
+
+function fetchFailure(message: string, status: number): RadarFetchError {
+  const error: RadarFetchError = new Error(message);
+  error.status = status;
+  return error;
+}
+
+function failureStatus(error: unknown): number | undefined {
+  return error instanceof Error ? (error as RadarFetchError).status : undefined;
 }
 
 function isRadarCandidate(value: unknown): value is BinanceRadarCandidate {
@@ -112,7 +129,10 @@ async function loadSameOriginRadar(signal: AbortSignal): Promise<BinanceRadarRes
   });
   const payload: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(responseMessage(payload, `관심 레이더 요청 실패 (${response.status})`));
+    throw fetchFailure(
+      responseMessage(payload, `관심 레이더 요청 실패 (${response.status})`),
+      response.status,
+    );
   }
   if (!isRadarResult(payload)) {
     throw new Error("관심 레이더 응답 형식을 확인하지 못했습니다.");
@@ -185,6 +205,20 @@ function timeText(value: string | null | undefined): string {
   return Number.isNaN(parsed.getTime()) ? "—" : KST_FORMATTER.format(parsed);
 }
 
+const KST_CLOCK_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
+// A repeated failure produces the exact same sentence, so stamp every attempt.
+// Without it a retry that failed again is indistinguishable from a dead button.
+function withCheckStamp(message: string): string {
+  return `${message} (${KST_CLOCK_FORMATTER.format(new Date())} KST 확인)`;
+}
+
 function scoreTone(score: number): string {
   if (score >= 72) return styles.scoreHot;
   if (score >= 48) return styles.scoreWatch;
@@ -206,6 +240,9 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
   const [pageHidden, setPageHidden] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("");
   const [retryRevision, setRetryRevision] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  const pendingRetryRef = useRef(0);
+  const serverBlockedUntilRef = useRef(0);
 
   useEffect(() => {
     const onVisibility = () => setPageHidden(document.hidden);
@@ -219,63 +256,86 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
     const controller = new AbortController();
     let disposed = false;
     let running = false;
+    // Consume the click that re-ran this effect so the interval refreshes that
+    // follow are not mistaken for manual retries.
+    const manualRetry = pendingRetryRef.current > 0;
+    pendingRetryRef.current = 0;
 
-    const refresh = async () => {
+    const refresh = async (manual: boolean) => {
       if (running || document.hidden) return;
       running = true;
+      // A retry keeps the last good radar on screen, so the in-flight state is
+      // the only signal that the button did anything.
+      if (manual) setRetrying(true);
       if (!resultRef.current) setStatus("loading");
 
       let apiFailure = "";
       try {
-        const next = await withLinkedTimeout(
-          controller.signal,
-          loadSameOriginRadar,
-        );
-        if (disposed || controller.signal.aborted) return;
-        resultRef.current = next;
-        setResult(next);
-        setSource("api");
-        setStatus("live");
-        setNotice("");
-        setSelectedSymbol((current) =>
-          current && next.items.some((item) => item.symbol === current) ? current : "",
-        );
-        running = false;
-        return;
-      } catch (error) {
-        if (disposed || controller.signal.aborted) return;
-        apiFailure = errorMessage(error, "Sites 레이더 연결이 지연되고 있습니다.");
-      }
-
-      try {
-        const next = await withLinkedTimeout(
-          controller.signal,
-          (signal) => loadPublicFuturesRadar(signal),
-        );
-        if (disposed || controller.signal.aborted) return;
-        if (!isRadarResult(next)) {
-          throw new Error("브라우저 공개 REST 레이더 응답 형식을 확인하지 못했습니다.");
+        // A manual retry always re-checks the server route; an automatic refresh
+        // skips it while the block is known, so the public source answers at once.
+        if (manual || serverBlockedUntilRef.current <= Date.now()) {
+          try {
+            const next = await withLinkedTimeout(
+              controller.signal,
+              loadSameOriginRadar,
+            );
+            if (disposed || controller.signal.aborted) return;
+            serverBlockedUntilRef.current = 0;
+            resultRef.current = next;
+            setResult(next);
+            setSource("api");
+            setStatus("live");
+            setNotice("");
+            setSelectedSymbol((current) =>
+              current && next.items.some((item) => item.symbol === current) ? current : "",
+            );
+            return;
+          } catch (error) {
+            if (disposed || controller.signal.aborted) return;
+            if (failureStatus(error) === SERVER_BLOCK_STATUS) {
+              serverBlockedUntilRef.current = Date.now() + SERVER_BLOCK_RECHECK_MS;
+            }
+            apiFailure = errorMessage(error, "Sites 레이더 연결이 지연되고 있습니다.");
+          }
+        } else {
+          apiFailure = "Sites 레이더 경로가 이 지역에서 차단되어 건너뜁니다.";
         }
-        resultRef.current = next;
-        setResult(next);
-        setSource("public");
-        setStatus("recovered");
-        setNotice(`${apiFailure} 브라우저 공개 REST로 자동 복구했습니다.`);
-        setSelectedSymbol((current) =>
-          current && next.items.some((item) => item.symbol === current) ? current : "",
-        );
-      } catch (error) {
-        if (disposed || controller.signal.aborted) return;
-        const publicFailure = errorMessage(error, "브라우저 공개 REST 연결도 지연되고 있습니다.");
-        setStatus("delayed");
-        setNotice(`${apiFailure} ${publicFailure} 마지막 정상 레이더를 유지합니다.`);
+
+        try {
+          const next = await withLinkedTimeout(
+            controller.signal,
+            (signal) => loadPublicFuturesRadar(signal),
+          );
+          if (disposed || controller.signal.aborted) return;
+          if (!isRadarResult(next)) {
+            throw new Error("브라우저 공개 REST 레이더 응답 형식을 확인하지 못했습니다.");
+          }
+          resultRef.current = next;
+          setResult(next);
+          setSource("public");
+          setStatus("recovered");
+          setNotice(withCheckStamp(`${apiFailure} 브라우저 공개 REST로 자동 복구했습니다.`));
+          setSelectedSymbol((current) =>
+            current && next.items.some((item) => item.symbol === current) ? current : "",
+          );
+        } catch (error) {
+          if (disposed || controller.signal.aborted) return;
+          const publicFailure = errorMessage(error, "브라우저 공개 REST 연결도 지연되고 있습니다.");
+          setStatus("delayed");
+          setNotice(
+            withCheckStamp(`${apiFailure} ${publicFailure} 마지막 정상 레이더를 유지합니다.`),
+          );
+        }
       } finally {
         running = false;
+        // A disposed run belongs to a superseded effect and must not clear the
+        // flag owned by the retry that replaced it.
+        if (!disposed) setRetrying(false);
       }
     };
 
-    void refresh();
-    const interval = window.setInterval(() => void refresh(), RADAR_REFRESH_MS);
+    void refresh(manualRetry);
+    const interval = window.setInterval(() => void refresh(false), RADAR_REFRESH_MS);
     return () => {
       disposed = true;
       controller.abort();
@@ -284,6 +344,7 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
   }, [active, pageHidden, retryRevision]);
 
   const retry = useCallback(() => {
+    pendingRetryRef.current += 1;
     setRetryRevision((current) => current + 1);
   }, []);
 
@@ -296,7 +357,9 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
   const visibleStatus = !active || pageHidden ? "paused" : status;
   const statusLabel = visibleStatus === "paused"
     ? "일시정지"
-    : status === "loading"
+    : retrying
+      ? "재연결 중"
+      : status === "loading"
       ? "계산 중"
       : status === "recovered"
         ? "자동 복구"
@@ -320,7 +383,12 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
           <div className={styles.kicker}>CRYPTO + TRADFI · TOP 40 USDT PERPETUAL</div>
           <h2 id="attention-radar-title">관심 종목 레이더</h2>
         </div>
-        <div className={`${styles.state} ${statusClass}`} role="status" aria-live="polite">
+        <div
+          className={`${styles.state} ${statusClass}`}
+          role="status"
+          aria-live="polite"
+          title={notice || undefined}
+        >
           <i aria-hidden="true" />
           <span>{statusLabel}</span>
           <small>15분 갱신</small>
@@ -340,11 +408,15 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
         <span><small>갱신 시각</small><strong>{timeText(result?.computedAt)} KST</strong></span>
       </div>
 
-      {notice && (
-        <div className={styles.notice} role={status === "delayed" ? "alert" : "status"}>
+      {/* A recovered radar is live data, so it gets the status chip and the source
+          row, not a banner. Only a stale radar — both sources down — warrants one. */}
+      {status === "delayed" && notice && (
+        <div className={styles.notice} role="alert">
           <span aria-hidden="true">!</span>
           <p>{notice}</p>
-          <button type="button" onClick={retry} disabled={status === "loading"}>다시 연결</button>
+          <button type="button" onClick={retry} disabled={retrying}>
+            {retrying ? "재연결 중…" : "다시 연결"}
+          </button>
         </div>
       )}
 
@@ -374,7 +446,9 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
                     <span aria-hidden="true">!</span>
                     <strong>레이더 연결이 지연되고 있습니다</strong>
                     <p>Sites API와 브라우저 공개 REST를 다시 확인합니다.</p>
-                    <button type="button" onClick={retry}>다시 연결</button>
+                    <button type="button" onClick={retry} disabled={retrying}>
+                      {retrying ? "재연결 중…" : "다시 연결"}
+                    </button>
                   </div>
                 </td>
               </tr>

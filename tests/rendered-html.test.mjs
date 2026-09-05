@@ -668,6 +668,42 @@ test("client feed guards invalid API payloads and keeps selection dependencies s
     /<button[\s\S]*?type="button"[\s\S]*?className=\{styles\.symbolCell\}[\s\S]*?aria-pressed=\{isSelected\}[\s\S]*?onClick=\{\(\) => selectCandidate\(item\)\}/,
   );
 
+  assert.match(
+    radarSource,
+    /const manualRetry = pendingRetryRef\.current > 0[\s\S]*?pendingRetryRef\.current = 0[\s\S]*?if \(manual\) setRetrying\(true\)/,
+    "a manual Radar retry marks itself in flight so the button is never silent",
+  );
+  assert.match(
+    radarSource,
+    /finally \{[\s\S]*?if \(!disposed\) setRetrying\(false\)/,
+    "the in-flight flag clears once the attempt settles, and only for its own run",
+  );
+  assert.equal(
+    radarSource.match(/setNotice\(\s*withCheckStamp\(/g)?.length,
+    2,
+    "both Radar failure notices carry an attempt stamp so a repeat failure is visible",
+  );
+  assert.match(
+    radarSource,
+    /\{status === "delayed" && notice && \([\s\S]*?role="alert"/,
+    "only a stale Radar raises a banner; a recovered one stays a status chip",
+  );
+  assert.equal(
+    radarSource.match(/\{retrying \? "재연결 중…" : "다시 연결"\}/g)?.length,
+    2,
+    "every Radar retry button reports its own progress",
+  );
+  assert.match(
+    radarSource,
+    /if \(manual \|\| serverBlockedUntilRef\.current <= Date\.now\(\)\)[\s\S]*?failureStatus\(error\) === SERVER_BLOCK_STATUS[\s\S]*?serverBlockedUntilRef\.current = Date\.now\(\) \+ SERVER_BLOCK_RECHECK_MS/,
+    "a region-blocked server route is remembered so refreshes stop retrying it",
+  );
+  assert.match(
+    radarSource,
+    /serverBlockedUntilRef\.current = 0;[\s\S]*?setSource\("api"\)/,
+    "a server route that comes back clears the remembered block",
+  );
+
   const radarCss = await readFile(
     new URL("../app/components/AttentionRadar.module.css", import.meta.url),
     "utf8",
