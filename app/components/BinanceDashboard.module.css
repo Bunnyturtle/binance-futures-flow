@@ -3,7 +3,7 @@
   isolation: isolate;
   min-height: 100vh;
   overflow: hidden;
-  padding: 26px clamp(16px, 3.2vw, 52px) 24px;
+  padding: 23px clamp(16px, 3.2vw, 52px) 24px;
   color: var(--ink);
   background:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
@@ -142,7 +142,7 @@
 .topbar {
   width: min(1560px, 100%);
   min-height: 56px;
-  margin: 0 auto 20px;
+  margin: 0 auto 19px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -310,7 +310,7 @@
 .marketTabs {
   width: min(1560px, 100%);
   min-height: 52px;
-  margin: 0 auto 18px;
+  margin: 0 auto 17px;
   padding: 4px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
