@@ -292,14 +292,14 @@ test("server-renders the finished Binance futures dashboard", async () => {
   assert.match(workspaceCss, /\.timeframeControls\s*\{[^}]*width:\s*min\(560px,\s*100%\)[^}]*display:\s*flex/s);
   assert.match(
     workspaceCss,
-    /\.timeframeBar\s*\{[^}]*min-width:\s*0[^}]*min-height:\s*40px[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(9,\s*minmax\(0,\s*1fr\)\)[^}]*overflow:\s*hidden/s,
+    /\.timeframeBar\s*\{[^}]*min-width:\s*0[^}]*min-height:\s*34px[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(9,\s*minmax\(0,\s*1fr\)\)[^}]*overflow:\s*hidden/s,
   );
   assert.match(workspaceCss, /\.timeframeOption\s*\{[^}]*min-width:\s*0/s);
-  assert.match(workspaceCss, /\.timeframeOption span\s*\{[^}]*width:\s*100%[^}]*min-width:\s*0[^}]*height:\s*28px/s);
+  assert.match(workspaceCss, /\.timeframeOption span\s*\{[^}]*width:\s*100%[^}]*min-width:\s*0[^}]*height:\s*26px/s);
   assert.match(workspaceCss, /\.timeframeOption input:focus-visible \+ span\s*\{[^}]*outline:\s*2px solid var\(--accent\)/s);
   assert.match(workspaceCss, /\.timeframeOption input:checked \+ span\s*\{[^}]*background:\s*var\(--accent-strong\)/s);
   assert.match(workspaceCss, /\.activeTimeframeControl\s*\{[^}]*min-width:\s*220px/s);
-  assert.match(workspaceCss, /\.timeframeControls select\s*\{[^}]*height:\s*28px/s);
+  assert.match(workspaceCss, /\.timeframeControls select\s*\{[^}]*height:\s*26px/s);
   assert.match(
     workspaceCss,
     /@media \(max-width:\s*1180px\)[\s\S]*?\.timeframeControls\s*\{[^}]*width:\s*100%[^}]*order:\s*3/s,
@@ -622,6 +622,22 @@ test("client feed guards invalid API payloads and keeps selection dependencies s
     /<MultiChartWorkspace[\s\S]*?universeError=\{universeError\}/,
   );
   assert.doesNotMatch(dashboardSource, /styles\.scaleFrame/);
+
+  assert.match(
+    dashboardSource,
+    /function viewFromLocation\(\)[\s\S]*?new URLSearchParams\(window\.location\.search\)\.get\(VIEW_PARAM\)[\s\S]*?isDashboardView\(value\) \? value : null/,
+    "each window reads its own view from the URL, not from shared storage",
+  );
+  assert.match(
+    dashboardSource,
+    /const requestedView = viewFromLocation\(\)[\s\S]*?setActiveView\(requestedView \?\? stored\.activeSegment\)/,
+    "a URL view outranks the stored view every window on the origin shares",
+  );
+  assert.match(
+    dashboardSource,
+    /url\.searchParams\.set\(VIEW_PARAM, activeView\)[\s\S]*?window\.history\.replaceState/,
+    "switching views restamps this window's URL without adding history entries",
+  );
 
   const radarSource = await readFile(
     new URL("../app/components/AttentionRadar.tsx", import.meta.url),

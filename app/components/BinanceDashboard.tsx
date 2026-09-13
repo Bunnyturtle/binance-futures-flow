@@ -54,8 +54,22 @@ const AUTO_WALL_RANKING_VERSION_BY_SEGMENT: Record<MarketSegment, string> = {
   tradfi: TRADFI_WALL_RANKING_VERSION,
 };
 const DASHBOARD_VIEWS = ["crypto", "tradfi", "radar"] as const;
+const VIEW_PARAM = "view";
 
 type DashboardView = (typeof DASHBOARD_VIEWS)[number];
+
+function isDashboardView(value: string | null): value is DashboardView {
+  return value !== null && (DASHBOARD_VIEWS as readonly string[]).includes(value);
+}
+
+// Every window on this origin shares one localStorage, so a stored view cannot
+// hold one window on TRADFI while another stays on CRYPTO — the last writer wins
+// for both. The URL belongs to the window instead, and a browser session restore
+// brings each one back with the view it was left on.
+function viewFromLocation(): DashboardView | null {
+  const value = new URLSearchParams(window.location.search).get(VIEW_PARAM);
+  return isDashboardView(value) ? value : null;
+}
 
 type Theme = "dark" | "light";
 
@@ -802,8 +816,15 @@ export function BinanceDashboard() {
         setTheme("light");
       }
       const stored = readStoredDashboard();
-      setActiveSegment(stored.activeSegment);
-      setActiveView(stored.activeSegment);
+      // This window's own URL outranks the shared stored view; the stored one is
+      // the fallback for a bare "/" and supplies the market behind the radar.
+      const requestedView = viewFromLocation();
+      setActiveSegment(
+        requestedView && requestedView !== "radar"
+          ? requestedView
+          : stored.activeSegment,
+      );
+      setActiveView(requestedView ?? stored.activeSegment);
       setSegmentStates((current) => ({
         crypto: { ...current.crypto, ...stored.layouts.crypto },
         tradfi: { ...current.tradfi, ...stored.layouts.tradfi },
@@ -812,6 +833,16 @@ export function BinanceDashboard() {
     }, 0);
     return () => window.clearTimeout(timeout);
   }, []);
+
+  // Stamp the chosen view onto this window's URL so a reload, a restored session
+  // or a pinned tab reopens on it. replaceState keeps the back button unchanged.
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(VIEW_PARAM) === activeView) return;
+    url.searchParams.set(VIEW_PARAM, activeView);
+    window.history.replaceState(window.history.state, "", url);
+  }, [activeView, hydrated]);
 
   useEffect(() => {
     if (pickerSlotIndex === null) return;
