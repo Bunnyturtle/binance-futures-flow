@@ -1,126 +1,139 @@
-# BINANCE FUTURES FLOW
+# CRYPTO FLOW
 
-Binance USDⓈ-M의 거래 가능한 USDT 무기한 선물을 12개 슬롯에서 감시하는 실시간 다중 차트입니다. `CRYPTO`와 `TRADFI` 모두 C1·C2는 사용자가 자유롭게 변경하거나 비울 수 있으며 이후에도 선택값을 그대로 유지합니다. 새 `CRYPTO` 레이아웃만 C1과 C2가 각각 BTCUSDT와 ETHUSDT로 시작하고, 새 `TRADFI` 레이아웃의 C1·C2는 비어 있습니다. 두 시장의 C3~C12는 전체 거래 가능 종목의 24시간 거래대금 순위에서 현재 C1·C2 종목을 제외한 상위 10종목으로 시작 즉시 구성합니다. 동적 10종목은 시장별로 1시간마다 자동 재배치되며 C1·C2, 봉 주기와 활성 슬롯은 그대로 유지됩니다. 두 시장의 검색창은 모두 24시간 거래대금 순으로 후보를 보여 주며, `RADAR` 탭은 두 시장을 합쳐 거래대금 규모·최근 거래대금 강도·전일 대비 가격 변화를 5:3:2로 평가한 관심 후보를 보여 줍니다. 최초 과거 봉은 Binance REST API로 채우고, 이후 봉은 공개 WebSocket combined stream으로 갱신합니다. 표시 데이터는 시장 정보이며 주문 기능이나 투자 조언을 제공하지 않습니다.
+바이낸스 선물·업비트 원화 12분할 차트, 김프 차트, 거래소별 현선갭 감시를 한 앱으로 합친 프로젝트입니다. 모든 화면은 **조회 전용**이며 주문 기능이 없고 투자 조언이 아닙니다.
 
-이 저장소는 표준 **Next.js (App Router)** 프로젝트입니다. 특정 호스팅 벤더에 종속된 빌드 도구 없이 `next dev` / `next build` / `next start`만으로 동작하며, Vercel · Netlify · Node 서버 어디에나 그대로 배포할 수 있습니다.
+| 화면 | 주소 | 원래 프로젝트 |
+| --- | --- | --- |
+| BINANCE | `/binance` | `binance-futures-flow` (그대로 옮김) |
+| UPBIT | `/upbit` | `upbit-flow` (그대로 옮김) |
+| 김프 | `/kimp` | `gap-watch/spot_gap_chart.py` (파이썬 → TypeScript) |
+| 현선갭 | `/basis` | `gap-watch/gap_alert.py` (파이썬 → TypeScript) |
 
-## 로컬 실행
+- `/`로 들어오면 `/binance`로 넘어갑니다.
+- 네 화면 모두 상단 오른쪽 전환 메뉴로 오갑니다.
+- 밝은/어두운 테마는 네 화면이 함께 씁니다(저장 키 `crypto-flow-theme`). 예전 두 앱에서 고른 테마도 처음 한 번은 그대로 읽습니다.
+- 바이낸스·업비트 화면의 레이아웃 저장 키는 예전 그대로입니다. 같은 주소(`localhost:3000`)에서 쓰던 배치가 있으면 이어서 보입니다.
+
+## 실행
 
 필수 환경은 Node.js `20.9` 이상입니다.
 
 ```bash
-cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-브라우저에서 `http://localhost:3000`을 엽니다. 공개 시세만 볼 때는 `.env.local`의 `BINANCE_API_KEY`를 비워 두어도 됩니다.
+브라우저에서 `http://localhost:3000`을 엽니다. 키 없이도 모든 차트와 김프·현선갭 화면이 동작합니다. 업비트 잔고(BALANCE 탭)만 키가 필요합니다.
 
-프로덕션 빌드와 전체 검증은 다음 명령으로 실행합니다.
+검증:
 
 ```bash
-npm run build
-npm test
+npm test      # next build 후 tests/*.test.mjs 전체 실행
 npm run lint
-```
-
-## Vercel 배포
-
-1. 이 저장소를 GitHub에 푸시합니다.
-2. [vercel.com](https://vercel.com)에서 New Project → 해당 GitHub 저장소를 선택합니다. 프레임워크는 Next.js로 자동 인식됩니다.
-3. 환경 변수는 선택 사항입니다. 공개 시세만 사용하면 아무것도 설정하지 않아도 됩니다. 필요하면 `BINANCE_FUTURES_REST_URL`, `BINANCE_FUTURES_REST_FALLBACK_URLS`, `BINANCE_API_KEY`를 Vercel 프로젝트의 Environment Variables에 추가합니다.
-4. Deploy를 누르면 끝입니다. 이후 `main` 브랜치에 푸시할 때마다 자동으로 재배포됩니다.
-
-CLI로 직접 배포하려면:
-
-```bash
-npm install -g vercel
-vercel login
-vercel        # 프리뷰 배포
-vercel --prod # 프로덕션 배포
 ```
 
 ## 환경 변수
 
-| 변수 | 필수 여부 | 설명 |
-| --- | --- | --- |
-| `BINANCE_FUTURES_REST_URL` | 선택 | Binance USDⓈ-M REST 기본 주소입니다. 기본값은 `https://fapi.binance.com`입니다. |
-| `BINANCE_FUTURES_REST_FALLBACK_URLS` | 선택 | 운영자가 직접 검증하고 승인한 대체 REST 주소를 쉼표로 최대 3개 지정합니다. 기본값은 비어 있습니다. |
-| `BINANCE_API_KEY` | 선택 | 서버가 보낼 수 있는 API 키입니다. 이 프로젝트가 사용하는 공개 시장 데이터에는 필요하지 않습니다. |
+`.env.example`을 `.env.local`로 복사해 씁니다. 모두 선택 항목입니다.
 
-`.env.example`을 `.env.local`로 복사해 사용하세요. `BINANCE_API_KEY`는 서버 런타임 전용입니다. `NEXT_PUBLIC_*` 변수, 브라우저 코드, 로그, URL, 커밋에 키를 넣지 마세요. 이 앱은 API secret을 요구하지 않습니다.
+| 변수 | 설명 |
+| --- | --- |
+| `BINANCE_API_KEY` | 서버가 보낼 수 있는 API 키. 공개 시장 데이터에는 필요 없습니다. |
+| `BINANCE_FUTURES_REST_URL` | Binance USDⓈ-M REST 기본 주소. 기본값 `https://fapi.binance.com` |
+| `BINANCE_FUTURES_REST_FALLBACK_URLS` | 직접 검증한 대체 REST 주소(쉼표로 최대 3개) |
+| `UPBIT_ACCESS_KEY`, `UPBIT_SECRET_KEY` | 업비트 잔고 조회용. 둘 다 있어야 BALANCE 탭이 켜집니다. |
+| `UPBIT_REST_URL`, `UPBIT_REST_FALLBACK_URLS` | 업비트 REST 기본·대체 주소 |
+| `UPBIT_REQUEST_TIMEOUT_MS` | 업비트 REST 제한 시간(1,000~30,000ms, 기본 8,000) |
 
-## 구조와 데이터 흐름
+키는 서버 런타임에서만 읽습니다. `NEXT_PUBLIC_*` 변수, 브라우저 코드, 로그, URL, 커밋에 넣지 마세요.
+
+> **업비트 키를 넣은 채 공개 주소에 배포하지 마세요.** `/api/upbit/accounts`는 별도 인증 없이 응답하므로, 주소를 아는 누구나 잔고를 볼 수 있습니다. 업비트 키는 등록한 허용 IP에서만 동작하므로 잔고 패널은 로컬이나 고정 IP 서버에서 쓰는 것을 전제로 합니다.
+
+## 구조
 
 ```text
-브라우저
-  ├─ GET /api/chart-universe?segment=crypto|tradfi
-  │    └─ 서버 → exchangeInfo + ticker/24hr
-  │              ├─ CRYPTO: 검색 후보와 C3~C12 자동 배열 모두 24시간 거래대금순, C1·C2 사용자 지정 유지
-  │              └─ TRADFI: 검색 후보와 C3~C12 자동 배열 모두 24시간 거래대금순, C1·C2 사용자 지정 유지
-  ├─ POST /api/charts
-  │    └─ 서버 → 종목별 REST klines 200개와 현재 가격
-  ├─ GET /api/radar
-  │    └─ CRYPTO + TRADFI 통합 USDT 무기한 선물
-  │         ├─ ticker/24hr 거래대금 상위 40개 분석
-  │         ├─ 완료된 30일 일봉 거래대금 이력
-  │         └─ 50:30:20 관심 점수 상위 20개
-  ├─ 서버 REST 실패 시 공개 REST 직접 복구
-  │    └─ exchangeInfo + ticker/24hr + 선택 종목/레이더 일봉 klines
-  └─ 공개 combined WebSocket
-       └─ 화면에 보이는 종목의 kline stream을 실시간 병합
+app/
+  binance/page.tsx, upbit/page.tsx, kimp/page.tsx, basis/page.tsx
+  api/binance/{chart-universe,charts,radar}     바이낸스 (예전 /api/*)
+  api/upbit/{accounts,chart-universe,charts,radar}  업비트 (예전 /api/*)
+  api/kimp/{data,live}                          김프
+  api/basis                                     현선갭
+components/
+  binance/  upbit/       예전 두 앱의 화면 (API 경로와 전환 메뉴만 바뀜)
+  kimp/  basis/          새 화면
+  shared/                전환 메뉴(SectionSwitcher), 김프·현선갭 공통 바탕(FlowFrame)
+lib/                     거래소 클라이언트와 계산 로직 (spot-gap, basis-gap, basis-alerts 추가)
+tests/                   두 앱의 기존 테스트 + 김프·현선갭 테스트
+tools/gap-watch/         창을 닫아도 도는 현선갭 알림(파이썬)
 ```
 
-- `app/api/chart-universe`: `crypto`와 `tradfi` 검색 후보 및 자동 배열 순위는 모두 24시간 거래대금 내림차순입니다. 새 CRYPTO 레이아웃만 C1은 BTCUSDT, C2는 ETHUSDT로 시작하고 새 TRADFI 레이아웃의 두 슬롯은 비어 있습니다. 두 시장의 C1·C2는 이후 사용자가 지정한 값을 유지하며 C3~C12는 거래대금 순위에서 현재 C1·C2의 비어 있지 않은 종목을 제외한 상위 10개로 시작 즉시 구성된 뒤 시장별로 1시간마다 갱신됩니다.
-- `app/api/charts`: 선택한 최대 12개 종목을 검증하고 과거 OHLCV를 반환합니다.
-- `app/api/radar`: CRYPTO `PERPETUAL`과 TRADFI `TRADIFI_PERPETUAL`을 한 모집단으로 합친 뒤 최종 관심 후보 20개를 반환합니다. USDⓈ-M의 `TRADING`, quote·margin asset이 모두 `USDT`인 계약만 포함하므로 현물·USDC·COIN-M·인도물은 제외됩니다.
-- `lib/binance-client.ts`: Binance 응답 검증, 전체 심볼 카탈로그, 가격 단위(`tickSize`), 오류 변환과 TTL/single-flight 캐시를 담당합니다.
-- 브라우저 직접 복구는 API 키나 인증 헤더 없이 `fapi.binance.com`의 공개 GET 경로만 사용합니다. 서버 환경 변수는 클라이언트 번들로 전달되지 않습니다.
-- 네트워크 오류가 생기면 마지막 정상 차트를 유지하고 REST 재조회 및 WebSocket 재연결을 시도합니다. 두 REST 경로가 모두 실패할 때만 `DELAYED`로 표시합니다.
+## 김프 화면 (`/kimp`)
 
-## 관심 종목 레이더
+- **계산식**: (업비트 환산가 − 해외 가격) ÷ 해외 가격 × 100
+  - 업비트 환산가는 `KRW-코인 ÷ KRW-USDT`이며, 같은 봉의 종가끼리 계산합니다.
+  - 양수면 업비트가 더 비쌉니다.
+- **비교 거래소**: 바이낸스, 바이빗, 비트겟, 게이트, OKX의 USDT 현물
+- **조건**: 코인(업비트 KRW 마켓 티커), 봉(1분·5분·15분·1시간), 기간(1~60일)
+  - 선택값은 주소창(`?coin=XRP&interval=15&days=7`)에 남습니다.
+  - 한 번에 받는 봉은 1,000개라서 1분봉은 약 17시간, 15분봉은 약 10일까지 보입니다.
+- **갱신**:
+  - 2초마다 현재가로 마지막 봉을 움직입니다.
+  - 60초마다 봉 이력을 다시 받습니다.
+  - 업비트에 아직 마켓이 없거나 첫 체결 전이면 5초마다 다시 조회하다가, 체결되는 즉시 그립니다.
+- **범례**: 거래소 이름을 누르면 선을 켜고 끕니다. 끈 상태는 다음에 열어도 유지됩니다.
+- **제외 표시**: 상장되지 않은 거래소와, 티커만 같은 다른 코인으로 보이는 거래소(갭 −50% 미만 또는 +300% 초과)는 선을 그리지 않고 표에 이유를 적습니다.
 
-레이더는 단순 24시간 거래대금 순위가 아닙니다. 거래대금 규모는 전체 거래 가능 USDT 무기한 선물에서, 이력이 필요한 주간 강도와 전일 대비 값은 거래대금 상위 40개 분석군에서 중간순위 백분위수를 계산한 뒤 다음 비중으로 합산합니다.
+## 현선갭 화면 (`/basis`)
 
-- 거래대금 규모 50%: 현재 rolling 24시간 `quoteVolume`
-- 주간 거래대금 강도 30%: 완료된 최근 7일 일평균 `quoteVolume` ÷ 최근 30일 일평균 `quoteVolume`
-- 전일 대비 20%: 현재 가격 ÷ 가장 최근 완료된 UTC 일봉 종가의 가격 변화
+- **계산식**: (현물 − 선물) ÷ 선물 × 100. 같은 거래소의 USDT 현물과 USDT 무기한 선물을 비교합니다.
+- **대상**: 바이낸스, OKX, 바이빗, 비트겟, 게이트, 쿠코인, MEXC, HTX. 10초마다 갱신합니다.
+- **제외**:
+  - 현물 24h 거래대금 10만 USDT 미만, 선물 100만 USDT 미만
+  - |갭| 50% 초과
+- `1000PEPE`처럼 배수 단위로 상장된 선물은 1코인 가격으로 나눠 현물과 맞춥니다.
+- **알림 규칙**: 기본 |갭| 3% 이상
+  - 같은 거래소·코인은 10분 동안 다시 알리지 않습니다.
+  - 그 사이 2%p 더 벌어지면 다시 알립니다.
+- **소리와 윈도우 알림**
+  - 소리는 화면 안에서 직접 내며, **볼륨 슬라이더로 크기를 조절**합니다. 윈도우 알림음 설정과 무관합니다.
+  - 윈도우 알림을 켜면 **무음(silent)** 으로 띄워 윈도우 기본 알림음이 겹치지 않게 합니다.
+  - 브라우저는 페이지를 한 번이라도 누르기 전에는 소리를 막습니다. 화면을 한 번 클릭하거나 "알림 테스트"를 누르세요.
+- 설정(기준, 거래소, 소리, 볼륨, 윈도우 알림)은 브라우저에 저장됩니다.
+- **이 화면이 열려 있을 때만 알립니다.** 창을 닫아도 알림을 받으려면 아래 파이썬 도구를 쓰세요.
 
-## Binance 공식 엔드포인트
+### 백그라운드 알림 (`tools/gap-watch/gap_alert.py`)
 
-REST 기본 주소: `https://fapi.binance.com`
-
-사용하는 공개 REST 경로:
-
-- `GET /fapi/v1/exchangeInfo`
-- `GET /fapi/v1/ticker/24hr`
-- `GET /fapi/v2/ticker/price`
-- `GET /fapi/v1/klines`
-
-WebSocket: `wss://fstream.binance.com/market/stream?streams=btcusdt@kline_1m/ethusdt@kline_1m`
-
-앱에서 선택할 수 있는 시간봉: `1m 3m 5m 15m 1h 4h 1d 1w 1M`
-
-## 안전 및 운영 주의사항
-
-- `exchangeInfo`, `ticker/24hr`, `klines`, 공개 market stream에는 API 키가 필요하지 않습니다. 키를 비워 두는 구성이 가장 안전합니다.
-- REST 응답의 `X-MBX-USED-WEIGHT-*`와 HTTP `429`/`Retry-After`를 존중하세요.
-- WebSocket 한 연결은 최대 24시간 유지됩니다. ping/pong을 처리하고 종료 시 backoff와 jitter를 적용해 재연결하세요.
-- 한 WebSocket 연결은 최대 1024개 stream, 클라이언트가 보내는 제어 메시지는 초당 최대 10개입니다.
-
-## 문제 해결
-
-### 차트가 비어 있거나 `DELAYED`로 표시됨
-
-1. `https://fapi.binance.com/fapi/v1/ping`이 현재 네트워크에서 열리는지 확인합니다.
-2. 서버 로그에서 `429`, `451`, timeout 또는 DNS 오류를 확인합니다.
-3. `.env.local`을 바꿨다면 개발 서버를 다시 시작합니다.
-4. 브라우저 확장 프로그램이나 사내 프록시가 `wss://fstream.binance.com/market`을 차단하지 않는지 확인합니다.
-
-### 빌드 결과가 예상과 다름
+파이썬 표준 라이브러리만 씁니다. 같은 규칙으로 콘솔 출력과 비프음을 내고, 텔레그램으로도 보낼 수 있습니다.
 
 ```bash
-npm test
+python tools/gap-watch/gap_alert.py --once   # 현재 갭 상위 종목을 한 번만 출력
+python tools/gap-watch/gap_alert.py          # 상시 감시 (Ctrl+C로 종료)
 ```
 
-이 명령은 먼저 프로덕션 빌드를 만든 뒤 `tests/*.test.mjs` 전체를 실행해 Binance 페이지의 서버 렌더링 제목, 핵심 문구와 Open Graph 메타데이터를 확인합니다.
+텔레그램으로 받으려면 환경 변수 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 설정합니다.
+
+## 바이낸스·업비트 화면
+
+예전 두 앱의 기능을 그대로 옮겼습니다. 바뀐 점은 세 가지입니다.
+
+- API 주소: `/api/*` → `/api/binance/*`, `/api/upbit/*`
+- 상단에 화면 전환 메뉴 추가
+- 테마 저장 키 통합
+
+**공통 동작**
+
+- C1·C2는 사용자가 지정한 종목을 유지합니다.
+- C3~C12는 24시간 거래대금 상위 10종목으로 1시간마다 자동 배열합니다.
+- `RADAR` 탭은 거래대금 규모·최근 거래대금 강도·전일 대비 가격 변화를 5:3:2로 평가합니다.
+- 최초 과거 봉은 REST로 채우고, 이후 봉은 공개 WebSocket으로 갱신합니다.
+- 서버 REST가 실패하면 브라우저가 공개 REST로 직접 복구합니다.
+
+## 배포 (Vercel)
+
+이 저장소는 원래 BINANCE FUTURES FLOW 저장소이며, `master` 브랜치가 Vercel(`binance-futures-flow.vercel.app`)로 자동 배포됩니다.
+
+- `vercel.json`이 서버 함수 지역을 서울(`icn1`)로 지정합니다. Vercel 기본 지역은 미국(`iad1`)인데, 바이낸스·바이빗 같은 거래소는 미국 접속을 막아 김프·현선갭 API가 데이터를 받지 못합니다. Hobby 플랜은 지역을 하나만 고를 수 있습니다.
+- 바이낸스·업비트 차트는 서버 조회가 실패해도 브라우저가 공개 REST로 직접 받아 오는 경로가 있습니다.
+- **Vercel에는 업비트 키를 넣지 마세요.** 공개 주소에서 잔고가 노출되고, 업비트 키는 등록한 IP에서만 동작합니다. 잔고 탭은 로컬 실행에서만 씁니다.
+
+이 앱은 원래 따로 있던 `upbit-flow`와 `gap-watch`를 이 저장소로 합친 것입니다.

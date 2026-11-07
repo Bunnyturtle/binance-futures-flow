@@ -483,7 +483,7 @@ export function MultiChartWorkspace({
           if (!trySameOrigin) {
             throw new Error("same-origin API 재시도 대기 중");
           }
-          const response = await fetchWithTimeout("/api/charts", {
+          const response = await fetchWithTimeout("/api/binance/charts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

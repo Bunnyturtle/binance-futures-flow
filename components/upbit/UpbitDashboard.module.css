@@ -36,10 +36,10 @@
   --control-bg: rgba(0, 0, 0, 0.24);
   --hover-bg: rgba(255, 255, 255, 0.025);
   --panel-sheen: rgba(255, 255, 255, 0.017);
-  --accent: #f0b90b;
-  --accent-strong: #ffd44a;
-  --accent-rgb: 240, 185, 11;
-  --accent-on: #17140a;
+  --accent: #4a90f7;
+  --accent-strong: #7fb4ff;
+  --accent-rgb: 74, 144, 247;
+  --accent-on: #07111f;
   --lime: #0ecb81;
   --lime-rgb: 14, 203, 129;
   --positive: #dd3c44;
@@ -82,9 +82,9 @@
   --control-bg: rgba(29, 70, 75, 0.065);
   --hover-bg: rgba(0, 113, 108, 0.055);
   --panel-sheen: rgba(0, 123, 118, 0.035);
-  --accent: #9c7600;
-  --accent-strong: #765900;
-  --accent-rgb: 156, 118, 0;
+  --accent: #0f56c3;
+  --accent-strong: #093687;
+  --accent-rgb: 15, 86, 195;
   --accent-on: #ffffff;
   --lime: #087f53;
   --lime-rgb: 8, 127, 83;
@@ -205,6 +205,7 @@
   font-size: 20px;
   line-height: 1;
   letter-spacing: -0.04em;
+  word-break: keep-all;
 }
 
 .brandBlock h1 span {
