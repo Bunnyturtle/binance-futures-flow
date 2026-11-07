@@ -65,7 +65,7 @@ after(() => {
 });
 
 async function render() {
-  return fetch(`${BASE_URL}/`, {
+  return fetch(`${BASE_URL}/binance`, {
     headers: { accept: "text/html" },
   });
 }
@@ -250,7 +250,7 @@ test("server-renders the finished Binance futures dashboard", async () => {
   );
 
   const workspaceCss = await readFile(
-    new URL("../app/components/MultiChartWorkspace.module.css", import.meta.url),
+    new URL("../components/binance/MultiChartWorkspace.module.css", import.meta.url),
     "utf8",
   );
   assert.match(
@@ -323,7 +323,7 @@ test("server-renders the finished Binance futures dashboard", async () => {
   );
 
   const dashboardCss = await readFile(
-    new URL("../app/components/BinanceDashboard.module.css", import.meta.url),
+    new URL("../components/binance/BinanceDashboard.module.css", import.meta.url),
     "utf8",
   );
   assert.match(
@@ -376,7 +376,7 @@ test("server-renders the finished Binance futures dashboard", async () => {
 
 test("client feed guards invalid API payloads and keeps selection dependencies stable", async () => {
   const dashboardSource = await readFile(
-    new URL("../app/components/BinanceDashboard.tsx", import.meta.url),
+    new URL("../components/binance/BinanceDashboard.tsx", import.meta.url),
     "utf8",
   );
   assert.match(
@@ -640,7 +640,7 @@ test("client feed guards invalid API payloads and keeps selection dependencies s
   );
 
   const radarSource = await readFile(
-    new URL("../app/components/AttentionRadar.tsx", import.meta.url),
+    new URL("../components/binance/AttentionRadar.tsx", import.meta.url),
     "utf8",
   );
   assert.match(radarSource, /const RADAR_REFRESH_MS = 15 \* 60_000/);
@@ -721,7 +721,7 @@ test("client feed guards invalid API payloads and keeps selection dependencies s
   );
 
   const radarCss = await readFile(
-    new URL("../app/components/AttentionRadar.module.css", import.meta.url),
+    new URL("../components/binance/AttentionRadar.module.css", import.meta.url),
     "utf8",
   );
   assert.match(
@@ -737,7 +737,7 @@ test("client feed guards invalid API payloads and keeps selection dependencies s
   assert.match(radarCss, /\.symbolCell:focus-visible\s*\{[^}]*outline:\s*2px solid/s);
 
   const workspaceSource = await readFile(
-    new URL("../app/components/MultiChartWorkspace.tsx", import.meta.url),
+    new URL("../components/binance/MultiChartWorkspace.tsx", import.meta.url),
     "utf8",
   );
   assert.match(workspaceSource, /const requestedSelectionContent\s*=/);
@@ -812,7 +812,7 @@ test("client feed guards invalid API payloads and keeps selection dependencies s
   assert.doesNotMatch(workspaceSource, /universeError/);
 
   const chartSource = await readFile(
-    new URL("../app/components/CandlestickChart.tsx", import.meta.url),
+    new URL("../components/binance/CandlestickChart.tsx", import.meta.url),
     "utf8",
   );
   assert.match(chartSource, /const chartBottom\s*=\s*height - 15/);

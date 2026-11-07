@@ -56,7 +56,7 @@ async function importTypescript(relativeUrl) {
   return import(`data:text/javascript;base64,${encoded}`);
 }
 
-const client = await importTypescript("../app/components/BinancePublicClient.tsx");
+const client = await importTypescript("../components/binance/BinancePublicClient.tsx");
 
 const APP_TIMEFRAMES = [
   "1m",
@@ -897,7 +897,7 @@ test("only app-supported futures intervals are exposed and monthly REST/WS casin
   }
 
   const workspaceSource = await readFile(
-    new URL("../app/components/MultiChartWorkspace.tsx", import.meta.url),
+    new URL("../components/binance/MultiChartWorkspace.tsx", import.meta.url),
     "utf8",
   );
   assert.match(
@@ -907,7 +907,7 @@ test("only app-supported futures intervals are exposed and monthly REST/WS casin
   assert.doesNotMatch(workspaceSource, /timeframe\.toLowerCase\(/);
 
   const chartSource = await readFile(
-    new URL("../app/components/CandlestickChart.tsx", import.meta.url),
+    new URL("../components/binance/CandlestickChart.tsx", import.meta.url),
     "utf8",
   );
   assert.match(
@@ -920,7 +920,7 @@ test("only app-supported futures intervals are exposed and monthly REST/WS casin
   );
 
   const dashboardSource = await readFile(
-    new URL("../app/components/BinanceDashboard.tsx", import.meta.url),
+    new URL("../components/binance/BinanceDashboard.tsx", import.meta.url),
     "utf8",
   );
   const exactRestore = dashboardSource.indexOf("VALID_TIMEFRAMES.has(exactValue");
@@ -965,7 +965,7 @@ test("browser fallback distinguishes CORS/network errors and request timeouts", 
 
 test("client fallback source contains no server secret or API-key access path", async () => {
   const source = await readFile(
-    new URL("../app/components/BinancePublicClient.tsx", import.meta.url),
+    new URL("../components/binance/BinancePublicClient.tsx", import.meta.url),
     "utf8",
   );
   assert.doesNotMatch(source, /process\.env|BINANCE_API_KEY|X-MBX-APIKEY|Authorization/);

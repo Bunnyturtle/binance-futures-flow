@@ -1209,8 +1209,8 @@ test("radar source combines eligible crypto and TradFi and reuses successful dai
 
 test("API routes expose the exact LIVE universe and chart contracts", async () => {
   const [universeRoute, chartsRoute, clientSource] = await Promise.all([
-    readFile(new URL("../app/api/chart-universe/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/charts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/binance/chart-universe/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/binance/charts/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/binance-client.ts", import.meta.url), "utf8"),
   ]);
   assert.match(universeRoute, /export async function GET/);

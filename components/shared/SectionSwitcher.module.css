@@ -1,0 +1,84 @@
+.switcher {
+  height: 34px;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--control-bg);
+}
+
+.item {
+  --dot: var(--muted);
+  height: 26px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  text-decoration: none;
+  font-family: var(--font-geist-mono), "Pretendard", "Noto Sans KR", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.item[data-section="binance"] { --dot: #f0b90b; }
+.item[data-section="upbit"] { --dot: #4a90f7; }
+.item[data-section="kimp"] { --dot: #2fbf9f; }
+.item[data-section="basis"] { --dot: #9d84f5; }
+
+.item i {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--dot);
+  opacity: 0.5;
+}
+
+.item:hover {
+  color: var(--text-strong);
+  background: var(--hover-bg);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.item[aria-current="page"] {
+  color: var(--text-strong);
+  border-color: var(--line-strong);
+  background: var(--panel-soft);
+}
+
+.item[aria-current="page"] i {
+  opacity: 1;
+  box-shadow: 0 0 7px var(--dot);
+}
+
+/* 바이낸스·업비트 상단은 로고와 상태 칩이 함께 있어 폭이 좁아지면 메뉴부터 줄입니다. */
+@media (max-width: 1100px) {
+  .item { padding: 0 7px; gap: 0; letter-spacing: 0.05em; }
+  .item i { display: none; }
+}
+
+@media (max-width: 720px) {
+  .switcher { height: 32px; }
+  .item { height: 24px; padding: 0 7px; gap: 5px; font-size: 8px; letter-spacing: 0.04em; }
+}
+
+@media (max-width: 480px) {
+  .item { padding: 0 6px; }
+  .item i { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item { transition: none; }
+}

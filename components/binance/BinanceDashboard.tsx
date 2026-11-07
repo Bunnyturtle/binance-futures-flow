@@ -31,6 +31,7 @@ import { loadPublicFuturesCatalog } from "./BinancePublicClient";
 import AttentionRadar from "./AttentionRadar";
 import type { BinanceRadarCandidate } from "../../lib/binance-radar";
 import styles from "./BinanceDashboard.module.css";
+import SectionSwitcher from "../shared/SectionSwitcher";
 
 const SLOT_COUNT = 12;
 const LEGACY_STORAGE_KEY = "binance-futures-chart-wall-v1";
@@ -43,7 +44,8 @@ const STORAGE_KEY = "futures-flow-market-wall-v5";
 const DASHBOARD_STORAGE_LOCK_NAME = "binance-futures-flow-market-wall-v5";
 const AUTO_WALL_GUARD_KEY_PREFIX = "futures-flow-auto-wall-ranked-at-v4";
 const AUTO_WALL_LOCK_NAME_PREFIX = "binance-futures-flow-auto-wall-v4";
-const THEME_KEY = "binance-futures-theme";
+const THEME_KEY = "crypto-flow-theme";
+const LEGACY_THEME_KEY = "binance-futures-theme";
 const SAME_ORIGIN_API_TIMEOUT_MS = 6_000;
 const SAME_ORIGIN_API_BACKOFF_MS = 60_000;
 const INVALID_AUTO_WALL_CATALOG_RETRY_MS = 5_000;
@@ -348,7 +350,7 @@ async function loadSameOriginFuturesCatalog(
   }, SAME_ORIGIN_API_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`/api/chart-universe?segment=${segment}`, {
+    const response = await fetch(`/api/binance/chart-universe?segment=${segment}`, {
       cache: "no-store",
       signal: controller.signal,
     });
@@ -809,7 +811,8 @@ export function BinanceDashboard() {
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      const preferred = window.localStorage.getItem(THEME_KEY);
+      const preferred = window.localStorage.getItem(THEME_KEY) ??
+        window.localStorage.getItem(LEGACY_THEME_KEY);
       if (preferred === "light" || preferred === "dark") {
         setTheme(preferred);
       } else if (window.matchMedia("(prefers-color-scheme: light)").matches) {
@@ -1579,6 +1582,7 @@ export function BinanceDashboard() {
           </div>
         </div>
         <div className={styles.headerControls}>
+          <SectionSwitcher current="binance" />
           <button type="button" className={styles.themeToggle} onClick={switchTheme}>
             <span className={styles.themeGlyph} aria-hidden="true">{theme === "dark" ? "☼" : "◐"}</span>
             <span className={styles.themeLabel}>{theme === "dark" ? "LIGHT" : "DARK"}</span>

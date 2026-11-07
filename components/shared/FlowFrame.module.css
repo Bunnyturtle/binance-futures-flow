@@ -1,0 +1,368 @@
+/* 바이낸스·업비트 대시보드(BinanceDashboard.module.css)와 같은 색 변수와 상단 구성을 씁니다. */
+
+.shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 16px clamp(16px, 3.2vw, 52px) 24px;
+  color: var(--ink);
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-alt) 1px, transparent 1px),
+    var(--canvas);
+  background-size: 34px 34px;
+  font-family: var(--font-geist-sans), "Pretendard", "Noto Sans KR", sans-serif;
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+.shell[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #080c12;
+  --grid-line: rgba(255, 255, 255, 0.012);
+  --grid-line-alt: rgba(255, 255, 255, 0.01);
+  --ink: #f2f5fa;
+  --heading: #e7ecf3;
+  --text-strong: #e5eaf0;
+  --text-secondary: #bdc6d2;
+  --muted: #8792a5;
+  --muted-2: #5c687b;
+  --line: rgba(160, 177, 204, 0.13);
+  --line-strong: rgba(160, 177, 204, 0.22);
+  --line-soft: rgba(160, 177, 204, 0.075);
+  --panel: rgba(16, 22, 31, 0.88);
+  --panel-soft: rgba(21, 29, 40, 0.72);
+  --chart-bg: #131722;
+  --surface-inset: rgba(5, 9, 14, 0.28);
+  --control-bg: rgba(0, 0, 0, 0.24);
+  --hover-bg: rgba(255, 255, 255, 0.025);
+  --positive: #dd3c44;
+  --negative: #1375ec;
+  --amber: #f2bc57;
+  --amber-rgb: 242, 188, 87;
+  --shadow: rgba(0, 0, 0, 0.18);
+  --error: #e9a2a7;
+  --error-border: rgba(255, 110, 120, 0.24);
+  --error-bg: rgba(255, 110, 120, 0.055);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+}
+
+.shell[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #f4f8f8;
+  --grid-line: rgba(0, 93, 89, 0.04);
+  --grid-line-alt: rgba(0, 93, 89, 0.03);
+  --ink: #102427;
+  --heading: #13282b;
+  --text-strong: #183034;
+  --text-secondary: #334b50;
+  --muted: #4f666b;
+  --muted-2: #63777c;
+  --line: rgba(47, 83, 89, 0.16);
+  --line-strong: rgba(47, 83, 89, 0.25);
+  --line-soft: rgba(47, 83, 89, 0.1);
+  --panel: rgba(255, 255, 255, 0.94);
+  --panel-soft: rgba(246, 251, 251, 0.92);
+  --chart-bg: #fbfdfd;
+  --surface-inset: rgba(29, 70, 75, 0.045);
+  --control-bg: rgba(29, 70, 75, 0.065);
+  --hover-bg: rgba(0, 113, 108, 0.055);
+  --positive: #dd3c44;
+  --negative: #1375ec;
+  --amber: #946000;
+  --amber-rgb: 148, 96, 0;
+  --shadow: rgba(30, 66, 71, 0.12);
+  --error: #9f2636;
+  --error-border: rgba(189, 38, 61, 0.24);
+  --error-bg: rgba(189, 38, 61, 0.055);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #c98a00;
+  --series-5: #d9618f;
+}
+
+/* 화면마다 포인트 색만 다릅니다. 김프는 청록, 현선갭은 보라. */
+.shell[data-theme="dark"][data-section="kimp"] {
+  --accent: #2fd1b0;
+  --accent-strong: #6ff0d6;
+  --accent-rgb: 47, 209, 176;
+  --accent-on: #04201a;
+}
+
+.shell[data-theme="light"][data-section="kimp"] {
+  --accent: #0b8a72;
+  --accent-strong: #066b58;
+  --accent-rgb: 11, 138, 114;
+  --accent-on: #ffffff;
+}
+
+.shell[data-theme="dark"][data-section="basis"] {
+  --accent: #a48bff;
+  --accent-strong: #c8b8ff;
+  --accent-rgb: 164, 139, 255;
+  --accent-on: #140c2c;
+}
+
+.shell[data-theme="light"][data-section="basis"] {
+  --accent: #6a4fd6;
+  --accent-strong: #5237b8;
+  --accent-rgb: 106, 79, 214;
+  --accent-on: #ffffff;
+}
+
+.shell *,
+.shell *::before,
+.shell *::after {
+  box-sizing: border-box;
+}
+
+.shell button,
+.shell input,
+.shell select {
+  font: inherit;
+}
+
+.ambientOne,
+.ambientTwo {
+  position: absolute;
+  z-index: -1;
+  width: 520px;
+  height: 520px;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+.ambientOne {
+  top: -370px;
+  right: 8%;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.12), transparent 69%);
+}
+
+.ambientTwo {
+  top: 45%;
+  left: -410px;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.06), transparent 69%);
+}
+
+.topbar {
+  width: min(1560px, 100%);
+  min-height: 56px;
+  margin: 0 auto 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brandBlock,
+.headerControls,
+.brandMark {
+  display: flex;
+  align-items: center;
+}
+
+.brandBlock {
+  gap: 14px;
+}
+
+.brandMark {
+  width: 38px;
+  height: 38px;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  border-radius: 11px;
+  background: linear-gradient(145deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-rgb), 0.03));
+  box-shadow: inset 0 0 16px rgba(var(--accent-rgb), 0.06), 0 8px 24px var(--shadow);
+}
+
+.brandMark i {
+  display: block;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 7px rgba(var(--accent-rgb), 0.6);
+}
+
+.brandMark i:nth-child(1) { height: 9px; opacity: 0.6; }
+.brandMark i:nth-child(2) { height: 20px; }
+.brandMark i:nth-child(3) { height: 14px; opacity: 0.8; }
+
+.eyebrow {
+  color: var(--accent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.18em;
+}
+
+.brandBlock h1 {
+  margin: 6px 0 0;
+  color: var(--heading);
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  word-break: keep-all;
+}
+
+.brandBlock h1 span {
+  margin-left: 5px;
+  color: var(--text-secondary);
+  font-weight: 520;
+}
+
+.headerControls {
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.themeToggle {
+  height: 34px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--control-bg);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.themeToggle:hover {
+  color: var(--accent-strong);
+  border-color: rgba(var(--accent-rgb), 0.38);
+  background: rgba(var(--accent-rgb), 0.07);
+}
+
+.themeToggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.themeGlyph {
+  width: 14px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.themeLabel {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.modeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.26);
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.06);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+
+.modeChip[data-delayed] {
+  color: var(--amber);
+  border-color: rgba(var(--amber-rgb), 0.34);
+  background: rgba(var(--amber-rgb), 0.075);
+}
+
+.feedKind {
+  margin-left: 2px;
+  padding: 3px 5px;
+  border-left: 1px solid currentColor;
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.clockBlock {
+  min-width: 87px;
+  padding-left: 13px;
+  border-left: 1px solid var(--line);
+}
+
+.clockBlock span,
+.clockBlock strong {
+  display: block;
+}
+
+.clockBlock span {
+  margin-bottom: 2px;
+  color: var(--muted-2);
+  font-size: 9px;
+}
+
+.clockBlock strong {
+  color: var(--text-secondary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.content {
+  width: min(1560px, 100%);
+  margin: 0 auto;
+}
+
+@media (max-width: 980px) {
+  .shell { padding-inline: 14px; }
+}
+
+@media (max-width: 720px) {
+  .shell { padding: 14px 10px 18px; background-size: 28px 28px; }
+  .topbar { align-items: flex-start; }
+  .brandMark { width: 34px; height: 34px; }
+  .brandBlock h1 { font-size: 17px; }
+  .eyebrow { font-size: 7px; }
+  .headerControls { gap: 7px; }
+  .themeToggle { width: 32px; padding-inline: 0; }
+  .themeLabel { display: none; }
+  .modeChip { height: 30px; padding: 0 9px; }
+  .feedKind { display: none; }
+  .clockBlock { display: none; }
+}
+
+@media (max-width: 480px) {
+  .brandBlock h1 span { display: block; margin: 4px 0 0; font-size: 12px; }
+  .brandMark { display: none; }
+  .topbar { gap: 10px; flex-wrap: wrap; }
+  .headerControls { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+  .modeChip { height: 28px; padding: 0 6px; font-size: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .themeToggle { transition: none; }
+}

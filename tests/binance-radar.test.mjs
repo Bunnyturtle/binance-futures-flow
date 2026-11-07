@@ -360,7 +360,7 @@ test("validates the public result limit", async () => {
 });
 
 test("same-origin radar route exposes the cached unified USD-M contract", async () => {
-  const source = await readFile(new URL("../app/api/radar/route.ts", import.meta.url), "utf8");
+  const source = await readFile(new URL("../app/api/binance/radar/route.ts", import.meta.url), "utf8");
 
   assert.match(source, /getBinanceMarketDataServiceFromEnv/);
   assert.match(source, /getRadarSourceCandidates/);

@@ -8,27 +8,33 @@ import {
   useState,
 } from "react";
 import {
-  BINANCE_RADAR_RESULT_LIMIT,
-  type BinanceRadarCandidate,
-  type BinanceRadarResult,
-} from "../../lib/binance-radar";
-import { loadPublicFuturesRadar } from "./BinancePublicClient";
+  UPBIT_RADAR_RESULT_LIMIT,
+  type UpbitRadarCandidate,
+  type UpbitRadarResult,
+} from "../../lib/upbit-radar";
+import {
+  formatKrwCompact,
+  formatKrwPrice,
+  formatRatio,
+  formatSignedPercent,
+} from "../../lib/format-krw";
+import { isUpbitKrwMarket } from "../../lib/upbit-market";
+import { loadPublicUpbitRadar } from "./UpbitPublicClient";
 import styles from "./AttentionRadar.module.css";
 
 const RADAR_REFRESH_MS = 15 * 60_000;
-const RADAR_REQUEST_TIMEOUT_MS = 12_000;
-// HTTP 451 is a property of where the server runs, so it cannot clear between
-// refreshes. Re-check hourly instead of burning a doomed request every 15
-// minutes; a manual retry always re-checks immediately.
-const SERVER_BLOCK_STATUS = 451;
-const SERVER_BLOCK_RECHECK_MS = 60 * 60_000;
+const RADAR_REQUEST_TIMEOUT_MS = 20_000;
+// 429/418은 IP 단위 한도라 잠깐 쉬어야 풀립니다. 매 갱신마다 두들기지 않도록
+// 한 번 걸리면 다음 자동 갱신은 서버 경로를 건너뜁니다. 수동 재시도는 즉시 확인합니다.
+const RATE_LIMITED_STATUS = new Set([418, 429]);
+const RATE_LIMIT_RECHECK_MS = 10 * 60_000;
 
 type RadarSource = "api" | "public";
 type RadarStatus = "loading" | "live" | "recovered" | "delayed";
 
 export type AttentionRadarProps = {
   active: boolean;
-  onSelectCandidate: (item: BinanceRadarCandidate) => void;
+  onSelectCandidate: (item: UpbitRadarCandidate) => void;
 };
 
 function record(value: unknown): Record<string, unknown> {
@@ -67,11 +73,8 @@ function failureStatus(error: unknown): number | undefined {
   return error instanceof Error ? (error as RadarFetchError).status : undefined;
 }
 
-function isRadarCandidate(value: unknown): value is BinanceRadarCandidate {
+function isRadarCandidate(value: unknown): value is UpbitRadarCandidate {
   const item = record(value);
-  const rank = item.rank;
-  const lastPrice = item.lastPrice;
-  const quoteVolume24h = item.quoteVolume24h;
   const finiteNumericFields = [
     "rank",
     "lastPrice",
@@ -86,43 +89,41 @@ function isRadarCandidate(value: unknown): value is BinanceRadarCandidate {
     "dayScore",
     "score",
   ].every((key) => typeof item[key] === "number" && Number.isFinite(item[key]));
-  return typeof item.symbol === "string" &&
-    /^[A-Z0-9_]{5,30}$/.test(item.symbol) &&
-    item.symbol.endsWith("USDT") &&
+  return isUpbitKrwMarket(item.market) &&
     typeof item.name === "string" &&
     typeof item.baseAsset === "string" &&
-    (item.segment === "crypto" || item.segment === "tradfi") &&
     typeof item.tickSize === "string" &&
     typeof item.evaluatedAt === "string" &&
-    typeof rank === "number" &&
-    Number.isInteger(rank) &&
-    rank > 0 &&
-    typeof lastPrice === "number" &&
-    lastPrice > 0 &&
-    typeof quoteVolume24h === "number" &&
-    quoteVolume24h >= 0 &&
+    typeof item.rank === "number" &&
+    Number.isInteger(item.rank) &&
+    item.rank > 0 &&
+    typeof item.lastPrice === "number" &&
+    item.lastPrice > 0 &&
+    typeof item.quoteVolume24h === "number" &&
+    item.quoteVolume24h >= 0 &&
+    typeof item.warning === "boolean" &&
     typeof item.provisional === "boolean" &&
     typeof item.weekMetricReady === "boolean" &&
     typeof item.dayMetricReady === "boolean" &&
     finiteNumericFields;
 }
 
-function isRadarResult(value: unknown): value is BinanceRadarResult {
+function isRadarResult(value: unknown): value is UpbitRadarResult {
   const root = record(value);
   const coverage = record(root.coverage);
   return typeof root.computedAt === "string" &&
     (typeof root.historyAsOf === "string" || root.historyAsOf === null) &&
     Array.isArray(root.items) &&
     root.items.length >= 1 &&
-    root.items.length <= BINANCE_RADAR_RESULT_LIMIT &&
+    root.items.length <= UPBIT_RADAR_RESULT_LIMIT &&
     root.items.every(isRadarCandidate) &&
     ["eligible", "analyzed", "historyReady", "provisional", "failed"].every(
       (key) => typeof coverage[key] === "number" && Number.isFinite(coverage[key]),
     );
 }
 
-async function loadSameOriginRadar(signal: AbortSignal): Promise<BinanceRadarResult> {
-  const response = await fetch("/api/radar", {
+async function loadSameOriginRadar(signal: AbortSignal): Promise<UpbitRadarResult> {
+  const response = await fetch("/api/upbit/radar", {
     cache: "no-store",
     headers: { Accept: "application/json" },
     signal,
@@ -160,36 +161,6 @@ async function withLinkedTimeout<T>(
   }
 }
 
-function compactUsdt(value: number): string {
-  if (!Number.isFinite(value) || value < 0) return "—";
-  return `${new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    maximumFractionDigits: 2,
-  }).format(value)} USDT`;
-}
-
-function priceText(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "—";
-  const maximumFractionDigits = value >= 1_000
-    ? 2
-    : value >= 1
-      ? 4
-      : 8;
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits,
-  }).format(value);
-}
-
-function signedPercent(value: number): string {
-  if (!Number.isFinite(value)) return "—";
-  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
-}
-
-function ratioText(value: number): string {
-  if (!Number.isFinite(value) || value < 0) return "—";
-  return `${value.toFixed(2)}×`;
-}
-
 const KST_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
   month: "2-digit",
@@ -213,8 +184,8 @@ const KST_CLOCK_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
   hour12: false,
 });
 
-// A repeated failure produces the exact same sentence, so stamp every attempt.
-// Without it a retry that failed again is indistinguishable from a dead button.
+// 같은 실패는 같은 문장을 만들어 내므로 확인 시각을 붙입니다. 이게 없으면
+// 다시 실패한 재시도와 반응 없는 버튼을 구별할 수 없습니다.
 function withCheckStamp(message: string): string {
   return `${message} (${KST_CLOCK_FORMATTER.format(new Date())} KST 확인)`;
 }
@@ -232,17 +203,17 @@ function movementTone(value: number): string {
 }
 
 export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProps) {
-  const resultRef = useRef<BinanceRadarResult | null>(null);
-  const [result, setResult] = useState<BinanceRadarResult | null>(null);
+  const resultRef = useRef<UpbitRadarResult | null>(null);
+  const [result, setResult] = useState<UpbitRadarResult | null>(null);
   const [source, setSource] = useState<RadarSource | null>(null);
   const [status, setStatus] = useState<RadarStatus>("loading");
   const [notice, setNotice] = useState("");
   const [pageHidden, setPageHidden] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState("");
+  const [selectedMarket, setSelectedMarket] = useState("");
   const [retryRevision, setRetryRevision] = useState(0);
   const [retrying, setRetrying] = useState(false);
   const pendingRetryRef = useRef(0);
-  const serverBlockedUntilRef = useRef(0);
+  const serverThrottledUntilRef = useRef(0);
 
   useEffect(() => {
     const onVisibility = () => setPageHidden(document.hidden);
@@ -256,55 +227,51 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
     const controller = new AbortController();
     let disposed = false;
     let running = false;
-    // Consume the click that re-ran this effect so the interval refreshes that
-    // follow are not mistaken for manual retries.
+    // 이 effect를 다시 돌린 클릭을 소비해, 뒤이어 오는 주기 갱신이 수동 재시도로
+    // 오인되지 않게 합니다.
     const manualRetry = pendingRetryRef.current > 0;
     pendingRetryRef.current = 0;
 
     const refresh = async (manual: boolean) => {
       if (running || document.hidden) return;
       running = true;
-      // A retry keeps the last good radar on screen, so the in-flight state is
-      // the only signal that the button did anything.
+      // 재시도는 마지막 정상 레이더를 화면에 남겨 두므로, 진행 중 상태만이
+      // 버튼이 동작했다는 유일한 신호입니다.
       if (manual) setRetrying(true);
       if (!resultRef.current) setStatus("loading");
 
       let apiFailure = "";
       try {
-        // A manual retry always re-checks the server route; an automatic refresh
-        // skips it while the block is known, so the public source answers at once.
-        if (manual || serverBlockedUntilRef.current <= Date.now()) {
+        if (manual || serverThrottledUntilRef.current <= Date.now()) {
           try {
-            const next = await withLinkedTimeout(
-              controller.signal,
-              loadSameOriginRadar,
-            );
+            const next = await withLinkedTimeout(controller.signal, loadSameOriginRadar);
             if (disposed || controller.signal.aborted) return;
-            serverBlockedUntilRef.current = 0;
+            serverThrottledUntilRef.current = 0;
             resultRef.current = next;
             setResult(next);
             setSource("api");
             setStatus("live");
             setNotice("");
-            setSelectedSymbol((current) =>
-              current && next.items.some((item) => item.symbol === current) ? current : "",
+            setSelectedMarket((current) =>
+              current && next.items.some((item) => item.market === current) ? current : ""
             );
             return;
           } catch (error) {
             if (disposed || controller.signal.aborted) return;
-            if (failureStatus(error) === SERVER_BLOCK_STATUS) {
-              serverBlockedUntilRef.current = Date.now() + SERVER_BLOCK_RECHECK_MS;
+            const status = failureStatus(error);
+            if (status !== undefined && RATE_LIMITED_STATUS.has(status)) {
+              serverThrottledUntilRef.current = Date.now() + RATE_LIMIT_RECHECK_MS;
             }
-            apiFailure = errorMessage(error, "Sites 레이더 연결이 지연되고 있습니다.");
+            apiFailure = errorMessage(error, "서버 레이더 연결이 지연되고 있습니다.");
           }
         } else {
-          apiFailure = "Sites 레이더 경로가 이 지역에서 차단되어 건너뜁니다.";
+          apiFailure = "서버 레이더가 업비트 요청 수 제한에 걸려 잠시 건너뜁니다.";
         }
 
         try {
           const next = await withLinkedTimeout(
             controller.signal,
-            (signal) => loadPublicFuturesRadar(signal),
+            (signal) => loadPublicUpbitRadar(signal),
           );
           if (disposed || controller.signal.aborted) return;
           if (!isRadarResult(next)) {
@@ -315,12 +282,15 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
           setSource("public");
           setStatus("recovered");
           setNotice(withCheckStamp(`${apiFailure} 브라우저 공개 REST로 자동 복구했습니다.`));
-          setSelectedSymbol((current) =>
-            current && next.items.some((item) => item.symbol === current) ? current : "",
+          setSelectedMarket((current) =>
+            current && next.items.some((item) => item.market === current) ? current : ""
           );
         } catch (error) {
           if (disposed || controller.signal.aborted) return;
-          const publicFailure = errorMessage(error, "브라우저 공개 REST 연결도 지연되고 있습니다.");
+          const publicFailure = errorMessage(
+            error,
+            "브라우저 공개 REST 연결도 지연되고 있습니다.",
+          );
           setStatus("delayed");
           setNotice(
             withCheckStamp(`${apiFailure} ${publicFailure} 마지막 정상 레이더를 유지합니다.`),
@@ -328,8 +298,7 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
         }
       } finally {
         running = false;
-        // A disposed run belongs to a superseded effect and must not clear the
-        // flag owned by the retry that replaced it.
+        // 폐기된 실행은 교체된 재시도가 소유한 플래그를 건드리면 안 됩니다.
         if (!disposed) setRetrying(false);
       }
     };
@@ -348,8 +317,8 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
     setRetryRevision((current) => current + 1);
   }, []);
 
-  const selectCandidate = useCallback((item: BinanceRadarCandidate) => {
-    setSelectedSymbol(item.symbol);
+  const selectCandidate = useCallback((item: UpbitRadarCandidate) => {
+    setSelectedMarket(item.market);
     onSelectCandidate(item);
   }, [onSelectCandidate]);
 
@@ -360,14 +329,12 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
     : retrying
       ? "재연결 중"
       : status === "loading"
-      ? "계산 중"
-      : status === "recovered"
-        ? "자동 복구"
-        : status === "delayed"
-          ? "연결 지연"
-          : status === "live"
-            ? "정상"
-            : "대기";
+        ? "계산 중"
+        : status === "recovered"
+          ? "자동 복구"
+          : status === "delayed"
+            ? "연결 지연"
+            : "정상";
   const statusClass = visibleStatus === "paused"
     ? styles.statePaused
     : status === "delayed"
@@ -380,7 +347,7 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
     <section className={styles.panel} aria-labelledby="attention-radar-title">
       <header className={styles.header}>
         <div>
-          <div className={styles.kicker}>CRYPTO + TRADFI · TOP 40 USDT PERPETUAL</div>
+          <div className={styles.kicker}>UPBIT KRW · 거래대금 상위 40 분석</div>
           <h2 id="attention-radar-title">관심 종목 레이더</h2>
         </div>
         <div
@@ -396,7 +363,16 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
       </header>
 
       <div className={styles.metaBar} aria-label="레이더 데이터 상태">
-        <span><small>소스</small><strong>{source === "public" ? "브라우저 공개 REST" : source === "api" ? "Sites API" : "연결 대기"}</strong></span>
+        <span>
+          <small>소스</small>
+          <strong>
+            {source === "public"
+              ? "브라우저 공개 REST"
+              : source === "api"
+                ? "서버 API"
+                : "연결 대기"}
+          </strong>
+        </span>
         <span>
           <small>분석 범위</small>
           <strong>{coverage ? `상위 ${coverage.analyzed} / 전체 ${coverage.eligible}` : "—"}</strong>
@@ -408,8 +384,8 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
         <span><small>갱신 시각</small><strong>{timeText(result?.computedAt)} KST</strong></span>
       </div>
 
-      {/* A recovered radar is live data, so it gets the status chip and the source
-          row, not a banner. Only a stale radar — both sources down — warrants one. */}
+      {/* 자동 복구는 실데이터이므로 상태 칩과 소스 행으로 충분합니다. 두 경로가
+          모두 끊겨 마지막 값만 남은 경우에만 배너를 띄웁니다. */}
       {status === "delayed" && notice && (
         <div className={styles.notice} role="alert">
           <span aria-hidden="true">!</span>
@@ -433,11 +409,13 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
             </tr>
           </thead>
           <tbody>
-            {status === "loading" && !result && Array.from({ length: BINANCE_RADAR_RESULT_LIMIT }, (_, index) => (
-              <tr className={styles.skeletonRow} key={index} aria-hidden="true">
-                <td><i /></td><td><i /></td><td><i /></td><td><i /></td><td><i /></td><td><i /></td>
-              </tr>
-            ))}
+            {status === "loading" && !result &&
+              Array.from({ length: UPBIT_RADAR_RESULT_LIMIT }, (_, index) => (
+                <tr className={styles.skeletonRow} key={index} aria-hidden="true">
+                  <td><i /></td><td><i /></td><td><i /></td>
+                  <td><i /></td><td><i /></td><td><i /></td>
+                </tr>
+              ))}
 
             {status === "delayed" && !result && (
               <tr>
@@ -445,7 +423,7 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
                   <div className={styles.emptyState} role="status">
                     <span aria-hidden="true">!</span>
                     <strong>레이더 연결이 지연되고 있습니다</strong>
-                    <p>Sites API와 브라우저 공개 REST를 다시 확인합니다.</p>
+                    <p>서버 API와 브라우저 공개 REST를 다시 확인합니다.</p>
                     <button type="button" onClick={retry} disabled={retrying}>
                       {retrying ? "재연결 중…" : "다시 연결"}
                     </button>
@@ -467,10 +445,11 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
             )}
 
             {result?.items.map((item) => {
-              const isSelected = selectedSymbol === item.symbol;
+              const isSelected = selectedMarket === item.market;
+              const tickSize = Number(item.tickSize);
               return (
                 <tr
-                  key={item.symbol}
+                  key={item.market}
                   className={isSelected ? styles.selectedRow : undefined}
                 >
                   <td><span className={styles.rank}>{String(item.rank).padStart(2, "0")}</span></td>
@@ -479,34 +458,54 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
                       type="button"
                       className={styles.symbolCell}
                       aria-pressed={isSelected}
-                      aria-label={`${item.name || `${item.baseAsset}/USDT`} 차트에 연결. 관심 점수 ${item.score.toFixed(1)}점`}
+                      aria-label={`${item.name} 차트에 연결. 관심 점수 ${item.score.toFixed(1)}점${
+                        item.warning ? ", 투자유의 종목" : ""
+                      }`}
                       onClick={() => selectCandidate(item)}
                     >
-                      <span className={styles.avatar} aria-hidden="true">{item.baseAsset.slice(0, 1)}</span>
+                      <span className={styles.avatar} aria-hidden="true">
+                        {item.baseAsset.slice(0, 1)}
+                      </span>
                       <div>
-                        <strong>{item.name || `${item.baseAsset}/USDT`}</strong>
-                        <small>{item.symbol} · {priceText(item.lastPrice)}</small>
+                        <strong>{item.name}{item.warning ? " ⚠" : ""}</strong>
+                        <small>
+                          {item.baseAsset}/KRW · {formatKrwPrice(item.lastPrice, tickSize)}
+                        </small>
                       </div>
                     </button>
                   </td>
                   <td>
                     <span className={styles.valueStack}>
-                      <strong>{compactUsdt(item.quoteVolume24h)}</strong>
+                      <strong>{formatKrwCompact(item.quoteVolume24h)}</strong>
                       <small>규모 점수 {item.sizeScore.toFixed(1)}</small>
                     </span>
                   </td>
-                  <td title={`7일 점수 ${item.weekScore.toFixed(1)} · 7일 평균 ${compactUsdt(item.weekAverageQuoteVolume)} · 30일 평균 ${compactUsdt(item.monthAverageQuoteVolume)}`}>
+                  <td
+                    title={`7일 점수 ${item.weekScore.toFixed(1)} · 7일 평균 ${
+                      formatKrwCompact(item.weekAverageQuoteVolume)
+                    } · 30일 평균 ${formatKrwCompact(item.monthAverageQuoteVolume)}`}
+                  >
                     <span className={styles.valueStack}>
-                      <strong className={item.weekMetricReady ? movementTone(item.weekVsMonthRatio - 1) : styles.neutral}>
-                        {item.weekMetricReady ? ratioText(item.weekVsMonthRatio) : "—"}
+                      <strong
+                        className={item.weekMetricReady
+                          ? movementTone(item.weekVsMonthRatio - 1)
+                          : styles.neutral}
+                      >
+                        {item.weekMetricReady ? formatRatio(item.weekVsMonthRatio) : "—"}
                       </strong>
                       <small>7일 점수 {item.weekScore.toFixed(1)}</small>
                     </span>
                   </td>
                   <td title={`전일대비 점수 ${item.dayScore.toFixed(1)}`}>
                     <span className={styles.valueStack}>
-                      <strong className={item.dayMetricReady ? movementTone(item.dayChangePercent) : styles.neutral}>
-                        {item.dayMetricReady ? signedPercent(item.dayChangePercent) : "—"}
+                      <strong
+                        className={item.dayMetricReady
+                          ? movementTone(item.dayChangePercent)
+                          : styles.neutral}
+                      >
+                        {item.dayMetricReady
+                          ? formatSignedPercent(item.dayChangePercent, 1)
+                          : "—"}
                       </strong>
                       <small>가격 변화</small>
                     </span>
@@ -514,7 +513,11 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
                   <td>
                     <span className={`${styles.score} ${scoreTone(item.score)}`}>
                       <strong>{item.score.toFixed(1)}</strong>
-                      <i style={{ "--radar-score": `${Math.max(0, Math.min(100, item.score))}%` } as CSSProperties} />
+                      <i
+                        style={{
+                          "--radar-score": `${Math.max(0, Math.min(100, item.score))}%`,
+                        } as CSSProperties}
+                      />
                       <small>{item.provisional ? "잠정 순위" : "관심 점수"}</small>
                     </span>
                   </td>
@@ -528,8 +531,10 @@ export function AttentionRadar({ active, onSelectCandidate }: AttentionRadarProp
       <footer className={styles.footer}>
         <span>24H 거래대금 상위 40 내 · 규모 50% · 최근 7일/30일 30% · 전일대비 가격 20%</span>
         <span>
-          {coverage ? `${result?.items.length ?? 0}개 후보 · 잠정 ${coverage.provisional}` : "USDT 무기한 선물 통합"}
-          {result?.historyAsOf ? ` · 이력 ${timeText(result.historyAsOf)}` : ""}
+          {coverage
+            ? `${result?.items.length ?? 0}개 후보 · 잠정 ${coverage.provisional}`
+            : "업비트 KRW 현물 통합"}
+          {result?.historyAsOf ? ` · 이력 ${result.historyAsOf}` : ""}
         </span>
       </footer>
     </section>
